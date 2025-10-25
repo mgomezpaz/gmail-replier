@@ -8,9 +8,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 const INTENT_MAP = {
-  "Im%20in": "I'm in",
-  "Tell%20me%20more": "Tell me more",
-  "Not%20my%20vibe": "Not my vibe"
+  "Im in": "I'm in",
+  "Tell me more": "Tell me more", 
+  "Not my vibe": "Not my vibe"
 };
 
 // Home page
@@ -82,10 +82,22 @@ app.get('/api/reply', async (req, res) => {
   try {
     const { intent, threadId, to, from, fromName, replyTo, subject, originalMessageId } = req.query;
 
+    // Debug logging
+    console.log('Received parameters:', { intent, threadId, to, from, fromName, replyTo, subject, originalMessageId });
+
     // Validate required parameters
     if (!intent || !INTENT_MAP[intent] || !threadId || !to || !from || !subject) {
+      console.log('Missing parameters:', { 
+        hasIntent: !!intent, 
+        hasThreadId: !!threadId, 
+        hasTo: !!to, 
+        hasFrom: !!from, 
+        hasSubject: !!subject,
+        intentInMap: !!INTENT_MAP[intent]
+      });
       return res.status(400).json({ 
-        error: "Missing required parameters: intent, threadId, to, from, subject" 
+        error: "Missing required parameters: intent, threadId, to, from, subject",
+        received: { intent, threadId, to, from, subject }
       });
     }
 
@@ -96,17 +108,23 @@ app.get('/api/reply', async (req, res) => {
       <p style="color:#6b7280;font-size:12px;">(Auto-posted via Campaign Sender Orchestrator)</p>
     </div>`;
 
-    await sendThreadedReply({
-      to: to,
-      from: from,
-      fromName: fromName || null,
-      replyTo: replyTo || from,
-      subject: subject,
-      htmlBody: html,
-      threadId: threadId,
-      inReplyTo: originalMessageId || null,
-      references: originalMessageId || null
-    });
+    // Check if we have Gmail credentials
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GMAIL_REFRESH_TOKEN) {
+      console.log('TEST MODE: Gmail credentials not set, simulating reply');
+      console.log('Would send reply:', { to, from, subject, threadId, intentText });
+    } else {
+      await sendThreadedReply({
+        to: to,
+        from: from,
+        fromName: fromName || null,
+        replyTo: replyTo || from,
+        subject: subject,
+        htmlBody: html,
+        threadId: threadId,
+        inReplyTo: originalMessageId || null,
+        references: originalMessageId || null
+      });
+    }
 
     // Redirect to confirmation
     const thanks = `${process.env.BASE_URL || `http://localhost:${PORT}`}/thanks`;
