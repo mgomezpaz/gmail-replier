@@ -1,4 +1,5 @@
 import { sendThreadedReply } from "../../lib/gmail.js";
+import { verifyToken } from "../../lib/sign.js";
 
 const INTENT_MAP = {
   "Im%20in": "I'm in",
@@ -12,16 +13,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { intent, threadId, to, from, fromName, replyTo, subject, originalMessageId } = req.query;
+    const { intent, token, threadId, to, from, fromName, replyTo, subject, originalMessageId } = req.query;
+
+    let payload = null;
+    
+    // Check if we have a token (preferred method)
+    if (token) {
+      payload = verifyToken(token);
+      if (!payload) {
+        return res.status(400).json({ error: "Invalid token" });
+      }
+    }
+
+    // Use token data if available, otherwise use direct parameters
+    const finalIntent = intent;
+    const finalThreadId = payload?.threadId || threadId;
+    const finalTo = payload?.to || to;
+    const finalFrom = payload?.from || from;
+    const finalFromName = payload?.fromName || fromName;
+    const finalReplyTo = payload?.replyTo || replyTo;
+    const finalSubject = payload?.subject || subject;
+    const finalOriginalMessageId = payload?.originalMessageId || originalMessageId;
 
     // Validate required parameters
-    if (!intent || !INTENT_MAP[intent] || !threadId || !to || !from || !subject) {
+    if (!finalIntent || !INTENT_MAP[finalIntent] || !finalThreadId || !finalTo || !finalFrom || !finalSubject) {
       return res.status(400).json({ 
-        error: "Missing required parameters: intent, threadId, to, from, subject" 
+        error: "Missing required parameters: intent, threadId, to, from, subject",
+        received: { intent: finalIntent, threadId: finalThreadId, to: finalTo, from: finalFrom, subject: finalSubject }
       });
     }
 
-    const intentText = INTENT_MAP[intent];
+    const intentText = INTENT_MAP[finalIntent];
 
     const html = `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6;">
       <p>${escapeHtml(intentText)}</p>
@@ -29,15 +51,15 @@ export default async function handler(req, res) {
     </div>`;
 
     await sendThreadedReply({
-      to: to,
-      from: from,
-      fromName: fromName || null,
-      replyTo: replyTo || from,
-      subject: subject,
+      to: finalTo,
+      from: finalFrom,
+      fromName: finalFromName || null,
+      replyTo: finalReplyTo || finalFrom,
+      subject: finalSubject,
       htmlBody: html,
-      threadId: threadId,
-      inReplyTo: originalMessageId || null,
-      references: originalMessageId || null
+      threadId: finalThreadId,
+      inReplyTo: finalOriginalMessageId || null,
+      references: finalOriginalMessageId || null
     });
 
     // Redirect to confirmation
