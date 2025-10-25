@@ -1,16 +1,16 @@
 {
-  "name": "vercel-gmail-replier",
-  "private": true,
+  "name": "gmail-replier",
+  "version": "1.0.0",
+  "description": "Gmail threaded reply system",
+  "main": "server.js",
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "googleapis": "^132.0.0",
-    "next": "14.2.5",
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "dotenv": "^16.0.0"
   }
 }
