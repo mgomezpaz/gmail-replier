@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "build": "echo 'No build step required for Express.js'",
+    "vercel-build": "echo 'No build step required for Express.js'"
   },
   "dependencies": {
     "express": "^4.18.2",
